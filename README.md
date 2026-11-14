@@ -53,7 +53,8 @@ A clean, single-page to-do app with real server-side accounts, persistent per-us
   - The Owner manages membership: invite, revoke pending invitations, and remove members (the owner cannot be removed)
   - Non-members get no team data — unknown or inaccessible teams return the same `404` so team existence is never leaked
   - Team changes sync automatically: members poll for updates every 25 seconds and the team roster refreshes every 60 seconds
-- **Light / dark theme** (remembers your choice, respects system preference by default)
+- **Light / dark theme** — labeled **Light / Dark** picker in the sidebar plus a one-click sun/moon toggle in the header and sign-in card
+  - Remembers your choice and respects your system preference until you pick one; the saved theme applies before the first paint, so there's no flash on load
 - **Keyboard friendly** — press `/` anywhere to jump to the new-task field, `Enter` to save an edit, `Esc` to cancel
 - Tasks and history save to the server automatically; the header shows when changes are saved
 
