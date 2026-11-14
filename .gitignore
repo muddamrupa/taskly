@@ -1,0 +1,16 @@
+# Local SQLite database — contains account data, never commit it
+taskly.db
+taskly.db-wal
+taskly.db-shm
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Secrets / local config
+.env
+*.local
+
+# OS / editor noise
+Thumbs.db
+.DS_Store
