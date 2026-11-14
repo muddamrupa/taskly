@@ -108,6 +108,8 @@
     teamMemberTemplate: document.getElementById("teamMemberTemplate"),
     teamPendingTemplate: document.getElementById("teamPendingTemplate"),
     sideInviteTemplate: document.getElementById("sideInviteTemplate"),
+    themeLight: document.getElementById("themeLight"),
+    themeDark: document.getElementById("themeDark"),
   };
 
   /** @type {Array<{id: string, text: string, description: string, done: boolean, priority: string, due: string|null, dueTime: string|null, progress: number, updates: Array<{id: string, text: string, progress: number, createdAt: number, system: boolean}>, createdAt: number}>} */
@@ -2336,6 +2338,8 @@
       button.setAttribute("aria-label", theme === "dark" ? "Switch to light theme" : "Switch to dark theme");
     }
 
+    updateThemePicker();
+
     if (persist) {
       try {
         localStorage.setItem(THEME_KEY, theme);
@@ -2343,6 +2347,16 @@
         /* ignore */
       }
     }
+  }
+
+  function updateThemePicker() {
+    if (!els.themeLight || !els.themeDark) return;
+    const theme = document.documentElement.dataset.theme;
+    const isDark = theme === "dark";
+    els.themeLight.setAttribute("aria-pressed", String(!isDark));
+    els.themeDark.setAttribute("aria-pressed", String(isDark));
+    els.themeLight.classList.toggle("active", !isDark);
+    els.themeDark.classList.toggle("active", isDark);
   }
 
   /* ---------------- AI suggestions ---------------- */
@@ -2786,6 +2800,9 @@
       applyTheme(next);
     });
   });
+
+  els.themeLight.addEventListener("click", () => applyTheme("light"));
+  els.themeDark.addEventListener("click", () => applyTheme("dark"));
 
   els.list.addEventListener("change", (event) => {
     const checkbox = event.target.closest(".task-check");
