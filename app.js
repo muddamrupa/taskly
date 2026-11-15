@@ -275,6 +275,12 @@
                   : 0
                 : clampProgress(item.progress),
             assignee: typeof item.assignee === "string" ? item.assignee.trim().slice(0, 60) : "",
+            restorableProgress:
+              Number.isFinite(item.restorableProgress) &&
+              item.restorableProgress >= 0 &&
+              item.restorableProgress <= 100
+                ? Math.round(item.restorableProgress)
+                : null,
             updates: normalizeUpdates(item.updates),
             createdAt: Number.isFinite(item.createdAt) ? item.createdAt : Date.now(),
           };
@@ -1590,6 +1596,14 @@
     checkbox.checked = task.done;
     checkbox.setAttribute("aria-label", task.done ? "Mark task as not done" : "Mark task as done");
 
+    const restoreBtn = node.querySelector(".task-restore-btn");
+    if (restoreBtn) {
+      restoreBtn.title = task.done
+        ? `Restore task to ${clampProgress(task.restorableProgress ?? lastCheckpointProgress(task))}% and reopen it`
+        : "Restore task";
+      restoreBtn.setAttribute("aria-label", restoreBtn.title);
+    }
+
     const text = node.querySelector(".task-text");
     text.textContent = task.text;
     text.title = "Double-click to edit";
@@ -2022,13 +2036,38 @@
     if (!task) return;
     task.done = done;
     if (done) {
+      // Remember where the task was so Restore can undo the completion.
+      task.restorableProgress = task.progress;
       task.progress = 100;
       archiveTask(task);
     } else {
+      // Un-completing (or restoring) returns the task to its pre-completion
+      // progress instead of leaving it stuck at 100%.
+      const fallback = lastCheckpointProgress(task);
+      task.progress =
+        task.restorableProgress === null || task.restorableProgress === undefined
+          ? fallback
+          : task.restorableProgress;
+      task.restorableProgress = null;
       unarchiveTask(task.id);
     }
     saveTasks();
     render();
+  }
+
+  function lastCheckpointProgress(task) {
+    const updates = Array.isArray(task.updates) ? task.updates : [];
+    for (let index = updates.length - 1; index >= 0; index -= 1) {
+      const value = Number(updates[index].progress);
+      if (Number.isFinite(value)) return clampProgress(value);
+    }
+    return 0;
+  }
+
+  function restoreCompletedTask(id) {
+    const task = tasks.find((item) => item.id === id);
+    if (!task || !task.done) return;
+    toggleTask(id, false);
   }
 
   function deleteTask(id) {
@@ -2209,6 +2248,12 @@
     history = history.filter((item) => item.id !== id);
     saveHistory();
 
+    // The history entry itself records 100% (it was complete); the task
+    // should come back at the progress from its last checkpoint instead.
+    const restoreProgress = lastCheckpointProgress({
+      updates: Array.isArray(entry.updates) ? entry.updates : [],
+    });
+
     const existing = entry.taskId ? tasks.find((task) => task.id === entry.taskId) : null;
 
     if (existing) {
@@ -2217,7 +2262,8 @@
       existing.assignee = entry.assignee || existing.assignee || "";
       existing.due = entry.due;
       existing.dueTime = entry.dueTime || null;
-      existing.progress = clampProgress(entry.progress);
+      existing.progress = restoreProgress;
+      existing.restorableProgress = null;
       if (!existing.updates.length) existing.updates = cloneUpdates(entry.updates);
     } else {
       tasks.push({
@@ -2229,7 +2275,8 @@
         priority: entry.priority,
         due: entry.due,
         dueTime: entry.dueTime || null,
-        progress: clampProgress(entry.progress),
+        progress: restoreProgress,
+        restorableProgress: null,
         updates: cloneUpdates(entry.updates),
         createdAt: Date.now(),
       });
@@ -2872,6 +2919,7 @@
     else if (button.classList.contains("edit-btn")) startEdit(node.dataset.id);
     else if (button.classList.contains("updates-btn")) toggleTaskDetails(node.dataset.id);
     else if (button.classList.contains("archive-btn")) archiveTaskManually(node.dataset.id);
+    else if (button.classList.contains("task-restore-btn")) restoreCompletedTask(node.dataset.id);
   });
 
   els.list.addEventListener("dblclick", (event) => {

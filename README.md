@@ -14,6 +14,9 @@ A clean, single-page to-do app with real server-side accounts, persistent per-us
   - Sessions use an HttpOnly cookie and survive browser refreshes
   - Each account has its own tasks, history, and filter
 - **Add tasks** with a target date, an optional specific deadline time, priority (Low / Medium / High), and an assignee
+- **Restore completed tasks** — completed tasks show a Restore button that reopens them at their pre-completion progress (or their last checkpoint for older entries), so an accidental completion costs nothing
+  - The pre-completion progress is stored server-side, so restores work even after closing and reopening the browser
+  - Restore is also available from the completion history, and simply unchecking a task returns it to its earlier progress
 - **Task details panel** — open any task to see its title, description, deadline (date + time), priority, assignee, creation time, current completion percentage, and a live progress bar
   - Edit the title, description, deadline date/time, priority, assignee, and progress in one place
   - Add timestamped checkpoint/comment updates with a progress percentage

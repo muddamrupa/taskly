@@ -2344,6 +2344,20 @@ textarea.detail-input {
   transform: translateY(-1px);
 }
 
+/* Restore (undo complete) is only offered on completed tasks. */
+.task .task-restore-btn {
+  display: none;
+}
+
+.task.done .task-restore-btn {
+  display: grid;
+  color: var(--accent);
+}
+
+.task.done .task-restore-btn:hover {
+  background: var(--accent-soft);
+}
+
 .edit-btn:hover {
   background: var(--accent-soft);
   color: var(--accent);

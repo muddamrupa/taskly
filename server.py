@@ -136,6 +136,7 @@ def init_db():
                 due_time    TEXT,
                 progress    INTEGER NOT NULL DEFAULT 0,
                 assignee    TEXT NOT NULL DEFAULT '',
+                restorable_progress INTEGER,
                 position    INTEGER NOT NULL DEFAULT 0,
                 created_at  INTEGER NOT NULL,
                 PRIMARY KEY (user_id, id)
@@ -224,6 +225,7 @@ def init_db():
                 due_time    TEXT,
                 progress    INTEGER NOT NULL DEFAULT 0,
                 assignee    TEXT NOT NULL DEFAULT '',
+                restorable_progress INTEGER,
                 position    INTEGER NOT NULL DEFAULT 0,
                 created_at  INTEGER NOT NULL,
                 PRIMARY KEY (team_id, id)
@@ -284,6 +286,8 @@ def init_db():
         for table, column, definition in (
             ("tasks", "assignee", "TEXT NOT NULL DEFAULT ''"),
             ("history", "assignee", "TEXT NOT NULL DEFAULT ''"),
+            ("tasks", "restorable_progress", "INTEGER"),
+            ("team_tasks", "restorable_progress", "INTEGER"),
         ):
             columns = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
             if column not in columns:
@@ -474,6 +478,15 @@ def sanitize_task(item, position):
     done = bool(item.get("done"))
     priority = item.get("priority")
     progress = 100 if done else clean_int(item.get("progress"), 0, 0, 100)
+    # Progress to fall back to when the task is un-completed/restored.
+    raw_restorable = item.get("restorableProgress")
+    restorable_progress = None
+    if (
+        isinstance(raw_restorable, (int, float))
+        and not isinstance(raw_restorable, bool)
+        and 0 <= raw_restorable <= 100
+    ):
+        restorable_progress = int(raw_restorable)
     return {
         "id": safe_id(item.get("id")),
         "text": text,
@@ -484,6 +497,7 @@ def sanitize_task(item, position):
         "dueTime": clean_time(item.get("dueTime")),
         "progress": progress,
         "assignee": clean_text(item.get("assignee"), 60),
+        "restorableProgress": restorable_progress,
         "updates": sanitize_updates(item.get("updates")),
         "createdAt": clean_int(item.get("createdAt"), int(time.time() * 1000)),
         "position": position,
@@ -576,6 +590,7 @@ def load_state(conn, key_id, workspace="personal"):
                 "dueTime": row["due_time"],
                 "progress": row["progress"],
                 "assignee": row["assignee"],
+                "restorableProgress": row["restorable_progress"],
                 "updates": updates_by_task.get(row["id"], []),
                 "createdAt": row["created_at"],
             }
@@ -659,8 +674,9 @@ def save_state(conn, key_id, payload, workspace="personal"):
                 f"""
                 INSERT INTO {spec['tasks']}
                     ({key_col}, id, text, description, done, priority, due,
-                     due_time, progress, assignee, position, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     due_time, progress, assignee, restorable_progress,
+                     position, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     key_id,
@@ -673,6 +689,7 @@ def save_state(conn, key_id, payload, workspace="personal"):
                     task["dueTime"],
                     task["progress"],
                     task["assignee"],
+                    task["restorableProgress"],
                     task["position"],
                     task["createdAt"],
                 ),
